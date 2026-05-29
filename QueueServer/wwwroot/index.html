@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Job Queue</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        /* FORMA */
+        .form-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            font-family: monospace;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            resize: vertical;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        select,
+        input[type=number] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        label {
+            font-size: 14px;
+            color: #555;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        /* WORKERS */
+        .workers-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .worker-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .worker-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .worker-alive {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .worker-dead {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* TABELA */
+        .jobs-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        /* STATUS BADGES */
+        .status {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-running {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* RESULT */
+        .result-text {
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* STATISTIKAT */
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .stat-box span {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        /* MESAZHI */
+        .message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .message-success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .message-error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🖥️ Distributed Job Queue</h1>
+
+        <!-- FORMA E DËRGIMIT -->
+        <div class="form-box">
+            <h2>📤 Dërgo Detyrë</h2>
+            <textarea id="code" placeholder="Shkruaj kodin këtu...
+Python: print('Hello World')
+C#: Console.WriteLine('Hello World');"></textarea>
+            <div class="controls">
+                <label>Gjuha:
+                    <select id="language">
+                        <option value="python">Python</option>
+                        <option value="csharp">C#</option>
+                    </select>
+                </label>
+                <label>Prioriteti (1-10):
+                    <input type="number" id="priority" value="5" min="1" max="10" style="width:70px">
+                </label>
+                <button id="submitBtn" onclick="submitJob()">🚀 Dërgo</button>
+            </div>
+            <div id="message" class="message"></div>
+        </div>
+
+        <!-- WORKER STATUS -->
+        <div class="workers-box">
+            <h2>⚙️ Worker-ët Aktiv</h2>
+            <div id="workerList" class="worker-list">
+                <span style="color:#999">Duke u ngarkuar...</span>
+            </div>
+        </div>
+
+        <!-- STATISTIKAT -->
+        <div class="jobs-box">
+            <h2>📋 Lista e Detyrave</h2>
+            <div class="stats">
+                <div class="stat-box">Gjithsej: <span id="statTotal">0</span></div>
+                <div class="stat-box">Në pritje: <span id="statPending">0</span></div>
+                <div class="stat-box">Duke u ekzekutuar: <span id="statRunning">0</span></div>
+                <div class="stat-box">Përfunduar: <span id="statDone">0</span></div>
+                <div class="stat-box">Dështuar: <span id="statFailed">0</span></div>
+            </div>
+
+            <!-- TABELA E DETYRAVE -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Gjuha</th>
+                        <th>Prioriteti</th>
+                        <th>Worker</th>
+                        <th>Status</th>
+                        <th>Rezultati</th>
+                        <th>Koha</th>
+                    </tr>
+                </thead>
+                <tbody id="jobsTable">
+                    <tr>
+                        <td colspan="7" style="text-align:center;color:#999">
+                            Asnjë detyrë ende...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ── KONFIGURIM ─────────────────────────────────────
+        const API = ''; // bosh = i njëjti server
+
+        // ── DËRGO DETYRË ───────────────────────────────────
+        async function submitJob() {
+            const code = document.getElementById('code').value.trim();
+            const language = document.getElementById('language').value;
+            const priority = parseInt(document.getElementById('priority').value);
+
+            if (!code) {
+                showMessage('Shkruaj kodin para se të dërgosh!', false);
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Duke dërguar...';
+
+            try {
+                const response = await fetch(`${API}/api/jobs/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, language, priority })
+                });
+
+                if (response.ok) {
+                    const job = await response.json();
+                    showMessage(`✅ Detyra u dërgua! ID: ${job.id.substring(0, 8)}...`, true);
+                    document.getElementById('code').value = '';
+                } else {
+                    showMessage('❌ Gabim gjatë dërgimit!', false);
+                }
+            } catch (err) {
+                showMessage(`❌ Nuk mund të lidhet me serverin: ${err.message}`, false);
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🚀 Dërgo';
+        }
+
+        // ── SHFAQ MESAZH ───────────────────────────────────
+        function showMessage(text, success) {
+            const el = document.getElementById('message');
+            el.textContent = text;
+            el.className = 'message ' + (success ? 'message-success' : 'message-error');
+            setTimeout(() => { el.className = 'message'; }, 4000);
+        }
+
+        // ── MERR DHE SHFAQ DETYRAT ─────────────────────────
+        async function loadJobs() {
+            try {
+                const response = await fetch(`${API}/api/jobs/list`);
+                const jobs = await response.json();
+
+                // Statistikat
+                document.getElementById('statTotal').textContent = jobs.length;
+                document.getElementById('statPending').textContent = jobs.filter(j => j.status === 'pending').length;
+                document.getElementById('statRunning').textContent = jobs.filter(j => j.status === 'running').length;
+                document.getElementById('statDone').textContent = jobs.filter(j => j.status === 'done').length;
+                document.getElementById('statFailed').textContent = jobs.filter(j => j.status === 'failed').length;
+
+                // Tabela — detyrat e fundit sipër
+                const tbody = document.getElementById('jobsTable');
+                if (jobs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999">Asnjë detyrë ende...</td></tr>';
+                    return;
+                }
+
+                const sorted = [...jobs].reverse();
+                tbody.innerHTML = sorted.map(job => `
+                <tr>
+                    <td style="font-family:monospace;font-size:12px">
+                        ${job.id.substring(0, 8)}...
+                    </td>
+                    <td>${job.language}</td>
+                    <td style="text-align:center">${job.priority}</td>
+                    <td>${job.assignedWorker || '-'}</td>
+                    <td>
+                        <span class="status status-${job.status}">
+                            ${statusEmoji(job.status)} ${job.status}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="result-text" title="${escapeHtml(job.result || '')}">
+                            ${job.result ? escapeHtml(job.result) : '-'}
+                        </div>
+                    </td>
+                    <td style="font-size:12px;color:#999">
+                        ${formatTime(job.createdAt)}
+                    </td>
+                </tr>
+            `).join('');
+
+            } catch (err) {
+                console.error('Gabim gjatë ngarkimit të detyrave:', err);
+            }
+        }
+
+        // ── MERR DHE SHFAQ WORKER-ËT ───────────────────────
+        async function loadWorkers() {
+            try {
+                const response = await fetch(`${API}/api/jobs/workers`);
+                const workers = await response.json();
+
+                const div = document.getElementById('workerList');
+                if (workers.length === 0) {
+                    div.innerHTML = '<span style="color:#999">Asnjë worker i regjistruar...</span>';
+                    return;
+                }
+
+                div.innerHTML = workers.map(w => `
+                <span class="worker-badge ${w.isAlive ? 'worker-alive' : 'worker-dead'}">
+                    ${w.isAlive ? '🟢' : '🔴'} ${w.id} 
+                    (${w.activeJobs} detyra aktive)
+                </span>
+            `).join('');
+            } catch (err) {
+                console.error('Gabim gjatë ngarkimit të worker-ëve:', err);
+            }
+        }
+
+        // ── HELPER FUNKSIONE ───────────────────────────────
+        function statusEmoji(status) {
+            switch (status) {
+                case 'pending': return '⏳';
+                case 'running': return '⚡';
+                case 'done': return '✅';
+                case 'failed': return '❌';
+                default: return '';
+            }
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('sq-AL');
+        }
+
+        // ── ENTER për submit ───────────────────────────────
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.key === 'Enter') submitJob();
+        });
+
+        // ── LIVE REFRESH çdo sekondë ───────────────────────
+        loadJobs();
+        loadWorkers();
+        setInterval(loadJobs, 1000);
+        setInterval(loadWorkers, 3000);
+    </script>
+</body>
+
+</html>

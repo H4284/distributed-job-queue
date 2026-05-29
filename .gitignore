@@ -1,0 +1,25 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+
+# Temp files nga CodeExecutor
+**/tmp/
+
+# Environment variables (nëse ke)
+.env
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db

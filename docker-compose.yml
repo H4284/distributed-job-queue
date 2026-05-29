@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  queue-server:
+    build:
+      context: .
+      dockerfile: QueueServer/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:5000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    mem_limit: 256m
+    environment:
+      - WORKER_ID=worker-1
+      - WORKER_URL=http://worker-1:5001
+      - QUEUE_SERVER_URL=http://queue-server:5000
+      - PYTHON_CMD=python3
+      - ASPNETCORE_URLS=http://0.0.0.0:5001
+    depends_on:
+      - queue-server
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    mem_limit: 256m
+    environment:
+      - WORKER_ID=worker-2
+      - WORKER_URL=http://worker-2:5001
+      - QUEUE_SERVER_URL=http://queue-server:5000
+      - PYTHON_CMD=python3
+      - ASPNETCORE_URLS=http://0.0.0.0:5001
+    depends_on:
+      - queue-server
+
+  worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    mem_limit: 256m
+    environment:
+      - WORKER_ID=worker-3
+      - WORKER_URL=http://worker-3:5001
+      - QUEUE_SERVER_URL=http://queue-server:5000
+      - PYTHON_CMD=python3
+      - ASPNETCORE_URLS=http://0.0.0.0:5001
+    depends_on:
+      - queue-server
